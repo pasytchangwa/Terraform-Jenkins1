@@ -95,7 +95,24 @@ pipeline {
                 }
             }
         }
-        
+
+        stage('Update kubectl') {
+             steps {
+                        withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh '''
+                          curl -LO https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl
+                          chmod +x kubectl
+                          export PATH=$PWD:$PATH
+                          ./kubectl version --client
+                     '''
+                    }
+                }
+            }
+        }
         
     }
 }
