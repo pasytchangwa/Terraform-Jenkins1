@@ -24,8 +24,14 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir('terraform') {
-                    sh 'terraform init'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'   
+                ]]) {
+                    dir('terraform') {
+                        sh 'aws sts get-caller-identity'
+                        sh 'terraform init'
+                    }
                 }
             }
         }
@@ -41,6 +47,15 @@ pipeline {
                 dir('terraform') {
                     sh 'terraform plan -out=tfplan'
                     sh 'terraform show -no-color tfplan > tfplan.txt'
+                } steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh 'terraform plan -out=tfplan'
+                        sh 'terraform show -no-color tfplan > tfplan.txt'
+                    }
                 }
             }
         }
@@ -65,20 +80,30 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                dir('terraform') {
-                    sh 'terraform apply -input=false tfplan'
+               steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh 'terraform apply -input=false tfplan'
+                    }
                 }
             }
         }
 
         stage('Update kubeconfig') {
              steps {
-                        dir('terraform') {
-                            sh '''
-                              aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster
-                              '''
-                        }
-                  }
+                        withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh 'aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster'
+                    }
+                }
+            }
+        }
             }
         
     }
