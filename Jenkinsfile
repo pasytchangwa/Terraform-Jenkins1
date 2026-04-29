@@ -43,11 +43,7 @@ pipeline {
             }
         }
         stage('Terraform Plan') {
-            steps {
-                dir('terraform') {
-                    sh 'terraform plan -out=tfplan'
-                    sh 'terraform show -no-color tfplan > tfplan.txt'
-                } steps {
+            steps {                                
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
@@ -80,8 +76,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-               steps {
-                withCredentials([[
+                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
@@ -104,7 +99,7 @@ pipeline {
                 }
             }
         }
-            }
+        
         
     }
 }
