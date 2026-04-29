@@ -70,6 +70,16 @@ pipeline {
                 }
             }
         }
+
+        stage('Update kubeconfig') {
+             steps {
+                        dir('terraform') {
+                            sh '''
+                              aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster
+                              '''
+                        }
+                  }
+            }
         
     }
 }
