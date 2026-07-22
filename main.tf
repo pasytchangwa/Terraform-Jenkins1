@@ -33,22 +33,6 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  access_entries = {
-  admin = {
-    principal_arn = "arn:aws:iam::957905603016:user/terra-admin"
-
-    policy_associations = {
-      cluster_admin = {
-        policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-
-        access_scope = {
-          type = "cluster"
-        }
-      }
-    }
-  }
-}
-
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
