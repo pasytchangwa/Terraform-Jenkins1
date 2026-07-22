@@ -82,7 +82,31 @@ pipeline {
                 }
             }
         }
+        stage('Refresh kubeconfig') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
+            sh '''
+                mkdir -p /var/lib/jenkins/.kube
 
+                # Always remove old kubeconfig
+                rm -f /var/lib/jenkins/.kube/config
+
+                # Generate fresh kubeconfig
+                aws eks update-kubeconfig \
+                    --region us-east-1 \
+                    --name demo-eks-cluster \
+                    --kubeconfig /var/lib/jenkins/.kube/config
+
+                echo "Verifying kubeconfig..."
+
+                grep server /var/lib/jenkins/.kube/config
+            '''
+        }
+    }
+}
         stage('Update kubeconfig') {
              steps {
                         withCredentials([[
@@ -113,6 +137,21 @@ pipeline {
                 }
             }
         }
+
+        stage('Verify EKS Cluster') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
+            sh '''
+                export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                kubectl get nodes
+            '''
+        }
+    }
+}
         
     }
 }
