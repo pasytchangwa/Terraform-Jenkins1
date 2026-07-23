@@ -36,7 +36,7 @@ module "eks" {
   version = "20.37.2"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.30"
+  cluster_version = "1.31"
 
   ###################################
   # Networking
