@@ -3,27 +3,17 @@ pipeline {
     agent any
 
     parameters {
-        booleanParam(
-            name: 'autoApprove',
-            defaultValue: false,
-            description: 'Automatically apply Terraform without manual approval'
-        )
+        booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
+       
     }
 
-    environment {
-        AWS_REGION = 'us-east-1'
-        CLUSTER_NAME = 'demo-eks-cluster'
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
-        KUBECTL_VERSION = 'v1.30.14'
-    }
-
+  
     stages {
 
         stage('Checkout') {
             steps {
                 dir('terraform') {
-                    git branch: 'main',
-                        url: 'https://github.com/Urmilaa/Terraform-Jenkins1.git'
+                    git branch: 'main', url: 'https://github.com/Urmilaa/Terraform-Jenkins1.git'
                 }
             }
         }
@@ -32,39 +22,31 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: 'aws-creds'   
                 ]]) {
-
                     dir('terraform') {
-                        sh '''
-                            aws sts get-caller-identity
-                            terraform init
-                        '''
+                        sh 'aws sts get-caller-identity'
+                        sh 'terraform init'
                     }
                 }
             }
         }
-
-        stage('Terraform Validate') {
+          stage('Terraform Validate') {
             steps {
                 dir('terraform') {
-                    sh 'terraform validate'
+                sh 'terraform validate'
                 }
             }
         }
-
         stage('Terraform Plan') {
-            steps {
+            steps {                                
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
-
                     dir('terraform') {
-                        sh '''
-                            terraform plan -out=tfplan
-                            terraform show -no-color tfplan > tfplan.txt
-                        '''
+                        sh 'terraform plan -out=tfplan'
+                        sh 'terraform show -no-color tfplan > tfplan.txt'
                     }
                 }
             }
@@ -73,135 +55,109 @@ pipeline {
         stage('Approval') {
 
             when {
-                expression {
-                    return !params.autoApprove
-                }
+                not { equals expected: true, actual: params.autoApprove }
             }
 
             steps {
-
                 script {
+                    def plan = readFile 'terraform/tfplan.txt'
 
-                    def plan = readFile('terraform/tfplan.txt')
-
-                    input(
-                        message: 'Approve Terraform Apply?',
-                        parameters: [
-                            text(
-                                name: 'Terraform Plan',
-                                defaultValue: plan,
-                                description: 'Review Terraform execution plan'
-                            )
-                        ]
-                    )
+                    input message: "Do you want to apply the plan?",
+                    parameters: [
+                        text(name: 'Terraform Plan', defaultValue: plan, description: 'Review Terraform Plan')
+                    ]
                 }
             }
         }
 
         stage('Terraform Apply') {
-
             steps {
-
-                withCredentials([[
+                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'aws-creds'
                 ]]) {
-
                     dir('terraform') {
+                        sh 'terraform apply -input=false tfplan'
+                    }
+                }
+            }
+        }
+        stage('Refresh kubeconfig') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
+            sh '''
+                mkdir -p /var/lib/jenkins/.kube
 
+                # Always remove old kubeconfig
+                rm -f /var/lib/jenkins/.kube/config
+
+                # Generate fresh kubeconfig
+                aws eks update-kubeconfig \
+                    --region us-east-1 \
+                    --name demo-eks-cluster \
+                    --kubeconfig /var/lib/jenkins/.kube/config
+
+                echo "Verifying kubeconfig..."
+
+                grep server /var/lib/jenkins/.kube/config
+            '''
+        }
+    }
+}     stage('Update kubectl') {
+             steps {
+                        withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
                         sh '''
-                            terraform apply -input=false tfplan
-                        '''
+                          curl -LO https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl
+                          chmod +x kubectl
+                          export PATH=$PWD:$PATH
+                          ./kubectl version --client
+                     '''
                     }
                 }
             }
         }
 
-        stage('Refresh kubeconfig') {
+        stage('Verify EKS Cluster') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
+            sh '''
+                export KUBECONFIG=/var/lib/jenkins/.kube/config
 
-            steps {
+                aws sts get-caller-identity
 
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
+                kubectl version --client
 
-                    sh '''
-                        mkdir -p /var/lib/jenkins/.kube
+                kubectl cluster-info
 
-                        rm -f ${KUBECONFIG}
+                export PATH=$PWD:$PATH
 
-                        aws eks update-kubeconfig \
-                            --region ${AWS_REGION} \
-                            --name ${CLUSTER_NAME} \
-                            --kubeconfig ${KUBECONFIG}
-
-                        echo "===== Kubeconfig Endpoint ====="
-                        grep server ${KUBECONFIG}
-                    '''
-                }
-            }
+                kubectl get nodes -o wide
+            '''
         }
-
-        stage('Install kubectl') {
-
-            steps {
-
-                sh '''
-                    sudo curl -Lo /usr/local/bin/kubectl \
-                    https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
-
-                    sudo chmod +x /usr/local/bin/kubectl
-
-                    kubectl version --client
-                '''
-            }
-        }
-
-        stage('Verify Cluster') {
-
-            steps {
-
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
-
-                    sh '''
-                        export KUBECONFIG=${KUBECONFIG}
-
-                        aws sts get-caller-identity
-
-                        echo ""
-                        echo "===== Cluster Info ====="
-                        kubectl cluster-info
-
-                        echo ""
-                        echo "===== Nodes ====="
-                        kubectl get nodes -o wide
-
-                        echo ""
-                        echo "===== Current Context ====="
-                        kubectl config current-context
-                    '''
-                }
-            }
-        }
-
     }
-
-    post {
-
-        success {
-            echo 'EKS Cluster created successfully.'
+}
+        stage('Update kubeconfig') {
+             steps {
+                        withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh 'aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster'
+                    }
+                }
+            }
         }
-
-        failure {
-            echo 'Pipeline failed.'
-        }
-
-        always {
-            cleanWs()
-        }
+        
     }
 }
