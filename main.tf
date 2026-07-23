@@ -28,46 +28,31 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  cluster_name    = var.cluster_name
-  cluster_version = "1.33"
-
-  enable_cluster_creator_admin_permissions = true
-
-  #access_entries = {
-  #terra_admin = {
-   # principal_arn = "arn:aws:iam::957905603016:user/terra-admin"
-
-    #policy_associations = {
-     # admin = {
-      #  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-
-       # access_scope = {
-        #  type = "cluster"
-        #}
-      #}
-    #}
-  #}
-#}
+  name               = var.cluster_name
+  kubernetes_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  enable_irsa = true
+  endpoint_public_access  = true
+  endpoint_private_access = true
 
- cluster_endpoint_public_access  = true
- cluster_endpoint_private_access = true
+  enable_cluster_creator_admin_permissions = true
+
+  enable_irsa = true
 
   eks_managed_node_groups = {
     default = {
       desired_size = 2
-      max_size     = 3
       min_size     = 1
+      max_size     = 3
 
       instance_types = ["t3.micro"]
-       ami_type = "AL2023_x86_64_STANDARD"
+      ami_type       = "AL2023_x86_64_STANDARD"
     }
   }
-    tags = {
+
+  tags = {
     Environment = "Dev"
     Terraform   = "true"
     Project     = "EKS-Lab"
