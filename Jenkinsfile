@@ -82,9 +82,11 @@ pipeline {
                 }
             }
         }
+
+        
         stage('Refresh kubeconfig') {
-    steps {
-        withCredentials([[
+          steps {
+            withCredentials([[
             $class: 'AmazonWebServicesCredentialsBinding',
             credentialsId: 'aws-creds'
         ]]) {
@@ -106,7 +108,9 @@ pipeline {
             '''
         }
     }
-}     stage('Update kubectl') {
+}    
+        
+        stage('Update kubectl') {
              steps {
                         withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
@@ -125,7 +129,7 @@ pipeline {
         }
 
         stage('Verify EKS Cluster') {
-    steps {
+        steps {
         withCredentials([[
             $class: 'AmazonWebServicesCredentialsBinding',
             credentialsId: 'aws-creds'
@@ -146,6 +150,8 @@ pipeline {
         }
     }
 }
+       
+        
         stage('Update kubeconfig') {
              steps {
                         withCredentials([[
