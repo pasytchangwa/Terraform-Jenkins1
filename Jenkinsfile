@@ -106,21 +106,7 @@ pipeline {
             '''
         }
     }
-}
-        stage('Update kubeconfig') {
-             steps {
-                        withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
-                    dir('terraform') {
-                        sh 'aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster'
-                    }
-                }
-            }
-        }
-
-        stage('Update kubectl') {
+}     stage('Update kubectl') {
              steps {
                         withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
@@ -147,11 +133,31 @@ pipeline {
             sh '''
                 export KUBECONFIG=/var/lib/jenkins/.kube/config
 
-                kubectl get nodes
+                aws sts get-caller-identity
+
+                kubectl version --client
+
+                kubectl cluster-info
+
+                export PATH=$PWD:$PATH
+
+                kubectl get nodes -o wide
             '''
         }
     }
 }
+        stage('Update kubeconfig') {
+             steps {
+                        withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    dir('terraform') {
+                        sh 'aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster'
+                    }
+                }
+            }
+        }
         
     }
 }
