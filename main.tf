@@ -26,10 +26,10 @@ module "vpc" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.0.0"
+  version = "~> 21.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.30"
+  cluster_version = "1.33"
 
   enable_cluster_creator_admin_permissions = true
 
@@ -66,5 +66,10 @@ module "eks" {
       instance_types = ["t3.micro"]
        ami_type = "AL2023_x86_64_STANDARD"
     }
+  }
+    tags = {
+    Environment = "Dev"
+    Terraform   = "true"
+    Project     = "EKS-Lab"
   }
 }
