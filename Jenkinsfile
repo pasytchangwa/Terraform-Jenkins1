@@ -2,11 +2,6 @@ pipeline {
 
     agent any
 
-    options {
-        timestamps()
-        ansiColor('xterm')
-    }
-
     parameters {
         booleanParam(
             name: 'autoApprove',
