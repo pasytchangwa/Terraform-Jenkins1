@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 dir('terraform') {
-                    git branch: 'main', url: 'https://github.com/Urmilaa/Terraform-Jenkins1.git'
+                    git branch: 'main', url: 'https://github.com/pasytchangwa/Terraform-Jenkins1.git'
                 }
             }
         }
@@ -22,7 +22,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'   
+                    credentialsId: 'Teraform_user'   
                 ]]) {
                     dir('terraform') {
                         sh 'aws sts get-caller-identity'
@@ -42,7 +42,7 @@ pipeline {
             steps {                                
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: 'Teraform_user'
                 ]]) {
                     dir('terraform') {
                         sh 'terraform plan -out=tfplan'
@@ -74,7 +74,7 @@ pipeline {
             steps {
                  withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: 'Teraform_user'
                 ]]) {
                     dir('terraform') {
                         sh 'terraform apply -input=false tfplan'
@@ -88,7 +88,7 @@ pipeline {
           steps {
             withCredentials([[
             $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
+            credentialsId: 'Teraform_user'
         ]]) {
             sh '''
                 mkdir -p /var/lib/jenkins/.kube
@@ -114,7 +114,7 @@ pipeline {
              steps {
                         withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: 'Teraform_user'
                 ]]) {
                     dir('terraform') {
                         sh '''
@@ -132,7 +132,7 @@ pipeline {
         steps {
         withCredentials([[
             $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
+            credentialsId: 'Teraform_user'
         ]]) {
             sh '''
                 export KUBECONFIG=/var/lib/jenkins/.kube/config
@@ -156,7 +156,7 @@ pipeline {
              steps {
                         withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
+                    credentialsId: 'Teraform_user'
                 ]]) {
                     dir('terraform') {
                         sh 'aws eks --region us-east-1 update-kubeconfig --name demo-eks-cluster'
